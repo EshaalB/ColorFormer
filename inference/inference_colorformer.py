@@ -54,7 +54,7 @@ def main():
     model = model.to(device)
     os.makedirs(args.output, exist_ok=True)
     dataset = ValDataset(args.input, args.input_size, False)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=False, num_workers=8, drop_last=False)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=False, num_workers=0, drop_last=False)
 
     _thread.start_new_thread(clear_write_buffer, (args, write_buffer))
     with torch.no_grad():

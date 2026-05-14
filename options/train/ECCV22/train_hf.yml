@@ -1,0 +1,103 @@
+# general settings
+name: train_hf
+model_type: LABGANRGBModel
+scale: 1
+num_gpu: 1
+manual_seed: 0
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: HFData
+    type: LabSegmentDataset
+    dataroot_gt: .
+    meta_info_file: ['train_list.txt']
+    io_backend:
+      type: disk
+
+    gt_size: 256
+    use_hflip: True
+    use_rot: False
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 1
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+# network structures
+network_g:
+  type: ColorFormer
+  encoder_name: GLHTransformer
+  pretrained_path: 'pretrain/GLH.pth'
+  last_norm: Spectral
+  num_output_channels: 2
+  do_normalize: False
+  color_centers_path: 'pretrain/color_embed_10000.npy'
+  semantic_centers_path: 'pretrain/semantic_embed_10000.npy'
+
+network_d:
+  type: DynamicUNetDiscriminator
+  nf: 64
+  n_channels: 3
+
+# path
+path:
+  pretrain_network_g: pretrain/net_g_200000.pth
+  strict_load_g: false
+  resume_state: ~
+
+# training settings
+train:
+  optim_g:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [50, 80]
+    gamma: 0.5
+
+  total_iter: 100 # Increased for better fine-tuning
+  warmup_iter: -1
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 0.1
+    reduction: mean
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      'conv1_1': 0.0625
+      'conv2_1': 0.125
+      'conv3_1': 0.25
+      'conv4_1': 0.5
+      'conv5_1': 1.0
+    vgg_type: vgg16_bn
+    use_input_norm: true
+    range_norm: false
+    perceptual_weight: 5.0
+    style_weight: 0
+    criterion: l1
+  gan_opt:
+    type: GANLoss
+    gan_type: vanilla
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: 1.0
+
+# logging settings
+logger:
+  print_freq: 10
+  save_checkpoint_freq: !!float 50
+  save_snapshot_freq: !!float 50
+  use_tb_logger: true
